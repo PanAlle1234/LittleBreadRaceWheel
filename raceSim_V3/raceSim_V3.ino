@@ -95,7 +95,7 @@ void setup() {
 
   //Screen Init
   tftscreeninit();
-//  welcomescreen(&a_pot_1, &a_pot_2);
+  welcomescreen(&a_pot_1, &a_pot_2);
   statictextwrite();
   writegeartoeScreen('N', 55, 40);
   // Init can TX frame
