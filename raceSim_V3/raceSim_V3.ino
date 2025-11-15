@@ -24,8 +24,6 @@ struct can_frame buttonMsg;
 struct can_frame PdlMsg;
 struct can_frame PotMsg;
 struct can_frame veh_sw_information;
-int veh_sw_information_scaling = 50;
-int veh_sw_information_offset = 0;
 unsigned long veh_sw_information_time = 0;
 int veh_sw_information_mm = 0;
 int veh_sw_information_mm_sts = 0;
@@ -97,7 +95,7 @@ void setup() {
 
   //Screen Init
   tftscreeninit();
-  welcomescreen(&a_pot_1, &a_pot_2);
+//  welcomescreen(&a_pot_1, &a_pot_2);
   statictextwrite();
   writegeartoeScreen('N', 55, 40);
   // Init can TX frame
@@ -109,9 +107,9 @@ void setup() {
   pinMode(dbtn_4.button_pin, INPUT);
   pinMode(dbtn_5.button_pin, INPUT);
   pinMode(dbtn_6.button_pin, INPUT);
-   pinMode(A1, INPUT_PULLUP);
-//  pinMode(A5, INPUT);
-//  pinMode(A4, INPUT);
+  pinMode(A1, INPUT_PULLUP);
+  //  pinMode(A5, INPUT);
+  //  pinMode(A4, INPUT);
 
   Serial.begin(115200);
   mcp2515.reset();
@@ -125,29 +123,7 @@ void loop() {
   // Timer 2 sec
   if (millis() - Timer_2000_Millis >= 100) {
     Timer_2000_Millis = millis();
-    //    diag_missing_message(veh_sw_information_time, 100, &veh_sw_information_mm, &veh_sw_information_mm_sts);
-
-    brakepedal = random(0, 100);
-    accellpedal = random(0, 100);
-    Var1 = Var1 + 10;
-    writeRPMtoScreen(analogRead(a_pot_2.button_pin), 65, 10, 8500);
-    writetmptoScreen(Var1 / 100, 10, 55, 95, ST7735_BLUE);
-    writetmptoScreen(Var1 / 100, 10, 90, 85, ST7735_BLUE);
-    //gear ice
-    writetmptoScreen(Var1 / 1000, 95, 55, 10, ST7735_RED);
-    //gear egear
-    writetmptoScreen(Var1 / 1000, 95, 90, 10, ST7735_RED);
-    //speed
-    writetmptoScreen(5.0*(analogRead(abtn_1.button_pin)/1023.0), 45, 85, 300, ST7735_WHITE);
-    //drv e pwt
-    writemodetoScreen(1, 1);
     writepedalgauge(a_pot_2.percentage, a_pot_1.percentage);
-    if (Var1 == 100) {
-      Var1 = 0;
-      writegeartoeScreen('D', 55, 40);
-      brakepedal = 0;
-      accellpedal = 0;
-    }
   }
 
   // Timer 100 msec
@@ -156,12 +132,12 @@ void loop() {
 
     PdlMsg.data[0] = dbtn_1.button_state;
     PdlMsg.data[1] = dbtn_2.button_state;
-    PdlMsg.data[2] = (analogRead(mltsts_1.button_pin)/1023.0)*5.0;
-    PdlMsg.data[3] = (analogRead(mltsts_2.button_pin)/1023.0)*5.0;
-    PdlMsg.data[4] = ((analogRead(A4)/1023.0)*5.0>=4);
+    PdlMsg.data[2] = (analogRead(mltsts_1.button_pin) / 1023.0) * 5.0;
+    PdlMsg.data[3] = (analogRead(mltsts_2.button_pin) / 1023.0) * 5.0;
+    PdlMsg.data[4] = ((analogRead(A4) / 1023.0) * 5.0 >= 4);
     PdlMsg.data[5] = dbtn_5.button_state;
     PdlMsg.data[6] = dbtn_6.button_state;
-    PdlMsg.data[7] = ((analogRead(A5)/1023.0)*5.0>=4);
+    PdlMsg.data[7] = ((analogRead(A5) / 1023.0) * 5.0 >= 4);
     //Pot can message
     PotMsg.data[0] = a_pot_1.percentage;
     PotMsg.data[1] = a_pot_2.percentage;
@@ -175,9 +151,9 @@ void loop() {
     buttonMsg.data[6] = (abtn_2.position_reading == 2);
     buttonMsg.data[7] = (abtn_2.position_reading == 3);
 
-      
-  Serial.print("position reading -->  ");
-  Serial.println(abtn_2.position_reading);
+
+//    Serial.print("position reading -->  ");
+//    Serial.println(abtn_2.position_reading);
   }
 
   // Timer 10 msec
@@ -205,16 +181,40 @@ void loop() {
   if (millis() - lastTimeMsg1 >= 200) {
     lastTimeMsg1 = millis();
     mcp2515.sendMessage(&PotMsg);
-  } 
+  }
 
-  if (millis() - lastTimeMsg2 >= 200 && millis()- lastTimeMsg1 >66) {
+  if (millis() - lastTimeMsg2 >= 200 && millis() - lastTimeMsg1 > 66) {
     lastTimeMsg2 = millis();
     mcp2515.sendMessage(&PdlMsg);
   }
 
-    if (millis() - lastTimeMsg3 >= 200 && millis()- lastTimeMsg1 >130) {
+  if (millis() - lastTimeMsg3 >= 200 && millis() - lastTimeMsg1 > 130) {
     lastTimeMsg3 = millis();
     mcp2515.sendMessage(&buttonMsg);
+  }
+
+  //CAN READ
+  if (mcp2515.readMessage(&veh_sw_information) == MCP2515::ERROR_OK)
+  {
+    if (veh_sw_information.can_id == 0x0F7) {
+      // RPM
+      writeRPMtoScreen(min(9500,veh_sw_information.data[1]*50), 65, 10, 8500);
+      // Speed
+      writetmptoScreen(min(500,veh_sw_information.data[2]*2), 45, 85, 300, ST7735_WHITE);
+      // Drv and Pwt
+      writemodetoScreen(veh_sw_information.data[3] & 0b00001111, (veh_sw_information.data[3] & 0b11110000)>>4);
+      // Gear egear
+      writetmptoScreen(min(8,((veh_sw_information.data[4] & 0b11110000)>>4)), 95, 90, 10, ST7735_RED);
+      // Gear ice
+      writetmptoScreen(min(8,veh_sw_information.data[4] & 0b00001111), 95, 55, 10, ST7735_RED);
+      // PRNDM
+      writegeartoeScreen(min(7,(veh_sw_information.data[5] & 0b11110000)>>4), 55, 40);
+      // Temp Oil
+      writetmptoScreen(min(255,veh_sw_information.data[6]), 10, 90, 85, ST7735_BLUE);
+      // Temp Coolant
+      writetmptoScreen(min(255,veh_sw_information.data[7]), 10, 55, 95, ST7735_BLUE);
+
+    }
   }
 
 
@@ -237,9 +237,9 @@ void analogprocessing_fcn(struct anl_btn_str* r)
 {
   float button_current_reading = analogRead(r->button_pin);
   if (button_current_reading <= 10) r->position_reading = 0;
-  else if (button_current_reading >=650 && button_current_reading <=670) r->position_reading = 1;
-  else if (button_current_reading >=870 && button_current_reading <=890) r->position_reading = 2;
-  else if (button_current_reading >=980 && button_current_reading <=1000) r->position_reading = 3;
+  else if (button_current_reading >= 650 && button_current_reading <= 670) r->position_reading = 1;
+  else if (button_current_reading >= 870 && button_current_reading <= 890) r->position_reading = 2;
+  else if (button_current_reading >= 980 && button_current_reading <= 1000) r->position_reading = 3;
   else  r->position_reading = 10;
 }
 
@@ -287,25 +287,7 @@ void init_canframe_fcn() {
   PotMsg.data[1] = 0x00;
 }
 
-void diag_missing_message(unsigned long timestamp_of_reception, int cycle_time, int *mm_counter, int *mm_sts) {
-  if (millis() - timestamp_of_reception >= cycle_time)
-  {
-    *mm_counter ++;
-    *mm_counter = min(500, *mm_counter);
-  }
-  else {
-    *mm_counter --;
-    *mm_counter = max(0, *mm_counter);
-  }
-  if (*mm_counter <= 5) *mm_sts = false;
-  else *mm_sts = true;
 
-
-  //  Serial.println(*mm_sts);
-  //  Serial.println(millis());
-
-
-}
 void tftscreeninit() {
   tft.initR(INITR_BLACKTAB);  // Initialize a ST7735S chip, black tab
   tft.fillScreen(ST7735_BLACK);  // Fill screen with black
@@ -435,27 +417,139 @@ void writetmptoScreen(uint16_t tmp, int16_t  x0, int16_t y0, int16_t const tmpLi
 
 }
 
-void writegeartoeScreen(char gear, int16_t  x0, int16_t y0) {
-  tft.setCursor(x0, y0);  // Set position (x,y)
-  tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-  tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-  tft.println(gear);  // Print a text or value
+void writegeartoeScreen(uint8_t gear, int16_t  x0, int16_t y0) {
+  switch(gear)
+  {
+  case 0:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('N');  // Print a text or value
+    break;
+  case 1:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('P');  // Print a text or value
+    break;
+  case 2:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('R');  // Print a text or value
+    break;
+  case 4:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('D');  // Print a text or value
+    break;
+  case 5:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('M');  // Print a text or value
+  break;
+  case 6:  
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_BLACK);
+    tft.println(' ');  // Print a text or value
+    tft.setCursor(x0, y0);  // Set position (x,y)
+    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+    tft.println('M');  // Print a text or value
+  break;
+  }
+
 }
 
 void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
   //DriveMode
   tft.setTextSize(2);  // Set text size. We are using custom font so you should always set text size as 0
   // Write to the display the text "World":
-  tft.setCursor(5, 116);  // Set position (x,y)
-  tft.setTextColor(ST7735_WHITE);  // Set color of text. We are using custom font so there is no background color supported
-  tft.println("SPORT");  // Print a text or value
-
-  //PwtMode
-  tft.setTextSize(2);  // Set text size. We are using custom font so you should always set text size as 0
-  // Write to the display the text "World":
-  tft.setCursor(80, 116);  // Set position (x,y)
-  tft.setTextColor(ST7735_WHITE);  // Set color of text. We are using custom font so there is no background color supported
-  tft.println("HYB");  // Print a text or value
+//  tft.setCursor(5, 116);  // Set position (x,y)
+//  tft.setTextColor(ST7735_WHITE);  // Set color of text. We are using custom font so there is no background color supported
+   switch (drivemode){
+    case 0:
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.println("     ");
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println("COMFR");  // Print a text or value
+      break;
+    case 2:
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("     ");
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("SPORT");
+      break;
+    case 1:
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("     ");
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("ECHAR");
+      break;
+    case 4:
+      tft.setCursor(5, 116);  
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("     ");
+      tft.setCursor(5, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("TRACK");
+      break;
+  }
+   switch (pwtmode){
+    case 0:
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("   ");
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println("HYB");  // Print a text or value
+      break;
+    case 1:
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("   ");
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("EV ");
+      break;
+    case 2:
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("   ");
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("ICE");
+      break;
+  }
 }
 
 void writepedalgauge(uint8_t accelpedal, uint8_t brakepedal) {
@@ -481,7 +575,7 @@ void welcomescreen(struct anl_pot_str *pot1, struct anl_pot_str *pot2) {
   tft.setTextSize(2);
   tft.setTextColor(ST77XX_GREEN);
   tft.println("LB3D_SW");
-  
+
   testdrawtext("This is not inteded for racing purpose.\nDesigned and Engineered in Rubiera, Italy", ST77XX_WHITE);
   unsigned long previous_time = millis();
   while (millis() - previous_time <= 5000) {
@@ -507,31 +601,31 @@ void welcomescreen(struct anl_pot_str *pot1, struct anl_pot_str *pot2) {
     previous_time = millis();
   }
   tft.fillScreen(ST77XX_BLACK);
-//Potentiometer calibration 
-tft.fillScreen(ST77XX_BLACK);
+  //Potentiometer calibration
+  tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(10, 30);
   tft.setTextSize(1);
   tft.setTextColor(ST77XX_GREEN);
   tft.println("PADDLE CALIBRATION - MIN");
   testdrawtext("Dont press neither of the paddle pot", ST77XX_WHITE);
-   previous_time = millis();
-   while (millis() - previous_time <= 5000) {
-      //do nothing, wait
-    }
-    pot1->min_range = analogRead(pot1->button_pin)+10;
-    pot2->min_range = analogRead(pot2->button_pin)+10;
-tft.fillScreen(ST77XX_BLACK);
+  previous_time = millis();
+  while (millis() - previous_time <= 5000) {
+    //do nothing, wait
+  }
+  pot1->min_range = analogRead(pot1->button_pin) + 10;
+  pot2->min_range = analogRead(pot2->button_pin) + 10;
+  tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(10, 30);
   tft.setTextSize(1);
   tft.setTextColor(ST77XX_GREEN);
   tft.println("PADDLE CALIBRATION - MAX");
   testdrawtext("Press both the paddles to the max", ST77XX_WHITE);
-   previous_time = millis();
-   while (millis() - previous_time <= 5000) {
-      //do nothing, wait
-    }
-    pot1->max_range = analogRead(pot1->button_pin)-10;
-    pot2->max_range = analogRead(pot2->button_pin)-10;
+  previous_time = millis();
+  while (millis() - previous_time <= 5000) {
+    //do nothing, wait
+  }
+  pot1->max_range = analogRead(pot1->button_pin) - 10;
+  pot2->max_range = analogRead(pot2->button_pin) - 10;
   tft.fillScreen(ST77XX_BLACK);
 }
 
