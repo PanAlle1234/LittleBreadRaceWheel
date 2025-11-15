@@ -1,0 +1,128 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: Vehicle SW_ECU
+VAL_TABLE_ ButtonSts 1 "Pressed" 0 "NotPressed" ;
+VAL_TABLE_ PaddleSts 1 "Pressed" 0 "Not_Pressed" ;
+
+
+BO_ 38 SW_PotentiometerStatus: 2 SW_ECU
+ SG_ Potentiometer_2_Sts : 8|8@1- (1,0) [0|100] "%" Vector__XXX
+ SG_ Potentiometer_1_Sts : 0|8@1- (1,0) [0|100] "%" Vector__XXX
+
+BO_ 247 Veh_SW_Information: 8 Vehicle
+ SG_ Veh_TOil : 48|8@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ Veh_TCool : 56|8@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ Veh_PWTMode : 28|4@1+ (1,0) [0|15] "" Vector__XXX
+ SG_ Veh_PRNDM_ST : 44|4@1+ (1,0) [0|15] "" Vector__XXX
+ SG_ Veh_ICEGear : 32|4@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ Veh_EMGear : 36|4@1+ (1,0) [0|15] "" Vector__XXX
+ SG_ Veh_DrvMode : 24|4@1+ (1,0) [0|15] "" Vector__XXX
+ SG_ Veh_VehSpd : 16|8@1+ (2,0) [0|510] "rpm"  Vehicle,SW_ECU
+ SG_ Veh_EngineSpeed : 8|8@1+ (50,0) [0|12750] "rpm"  Vehicle,SW_ECU
+ SG_ Veh_Engine_Sts : 7|1@1+ (1,0) [0|1] "adim"  Vehicle,SW_ECU
+
+BO_ 22 SW_ButtonStatus: 8 SW_ECU
+ SG_ Button_8_Sts : 56|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_7_Sts : 48|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_6_Sts : 40|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_5_Sts : 32|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_4_Sts : 24|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_3_Sts : 16|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_2_Sts : 8|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ Button_1_Sts : 0|8@1- (1,0) [-128|127] ""  Vehicle
+
+BO_ 54 SW_ButtonStatus_1: 8 SW_ECU
+ SG_ Button_12_Sts : 56|8@1- (1,0) [-128|127] "" Vector__XXX
+ SG_ Button_11_Sts : 48|8@1- (1,0) [-128|127] "" Vector__XXX
+ SG_ Button_10_Sts : 40|8@1- (1,0) [-128|127] "" Vector__XXX
+ SG_ Button_9_Sts : 32|8@1- (1,0) [-128|127] "" Vector__XXX
+ SG_ PaddleLeftUp_Sts : 8|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ MultistateSelector_2 : 24|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ PaddleRightUp_Sts : 0|8@1- (1,0) [-128|127] ""  Vehicle
+ SG_ MultistateSelector_1 : 16|8@1- (1,0) [-128|127] ""  Vehicle
+
+
+
+CM_ SG_ 38 Potentiometer_2_Sts "Pot 1 %";
+CM_ SG_ 38 Potentiometer_1_Sts "Pot 1 %";
+BA_DEF_  "MultiplexExtEnabled" ENUM  "No","Yes";
+BA_DEF_ BO_  "CANFD_BRS" ENUM  "0","1";
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 65535;
+BA_DEF_  "DBName" STRING ;
+BA_DEF_  "BusType" STRING ;
+BA_DEF_ BU_  "NodeLayerModules" STRING ;
+BA_DEF_ BU_  "ECU" STRING ;
+BA_DEF_ BU_  "CANoeJitterMax" INT 0 0;
+BA_DEF_ BU_  "CANoeJitterMin" INT 0 0;
+BA_DEF_ BU_  "CANoeDrift" INT 0 0;
+BA_DEF_ BU_  "CANoeStartDelay" INT 0 0;
+BA_DEF_ BO_  "VFrameFormat" ENUM  
+"StandardCAN","ExtendedCAN","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","StandardCAN_FD","ExtendedCAN_FD";
+BA_DEF_DEF_  "MultiplexExtEnabled" "No";
+BA_DEF_DEF_  "CANFD_BRS" "1";
+BA_DEF_DEF_  "DBName" "";
+BA_DEF_DEF_  "BusType" "";
+BA_DEF_DEF_  "NodeLayerModules" "";
+BA_DEF_DEF_  "ECU" "";
+BA_DEF_DEF_  "CANoeJitterMax" 0;
+BA_DEF_DEF_  "CANoeJitterMin" 0;
+BA_DEF_DEF_  "CANoeDrift" 0;
+BA_DEF_DEF_  "CANoeStartDelay" 0;
+BA_DEF_DEF_  "VFrameFormat" "StandardCAN";
+BA_ "BusType" "CAN";
+BA_ "DBName" "SW_dbc_v01";
+BA_ "VFrameFormat" BO_ 54 0;
+BA_ "GenMsgCycleTime" BO_ 38 200;
+BA_ "GenMsgCycleTime" BO_ 247 200;
+BA_ "GenMsgCycleTime" BO_ 22 200;
+BA_ "GenMsgCycleTime" BO_ 54 200;
+VAL_ 22 Button_8_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_7_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_6_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_5_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_4_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_3_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_2_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 22 Button_1_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 54 Button_12_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 54 Button_11_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 54 Button_10_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 54 Button_9_Sts 1 "Pressed" 0 "NotPressed" ;
+VAL_ 54 PaddleLeftUp_Sts 1 "Pressed" 0 "Not_Pressed" ;
+VAL_ 54 MultistateSelector_2 1 "Pressed" 0 "Not_Pressed" ;
+VAL_ 54 PaddleRightUp_Sts 1 "Pressed" 0 "Not_Pressed" ;
+VAL_ 54 MultistateSelector_1 1 "Pressed" 0 "Not_Pressed" ;
+
