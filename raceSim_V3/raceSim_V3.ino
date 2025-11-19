@@ -20,6 +20,14 @@ double rpm_max = 9000;
 int engine_sts = 0;
 bool was_black = true;
 
+bool chrono_screen_en = false;
+bool time_attack_screen_init = false;
+unsigned long lapStartTime = 0;
+unsigned long lapElapsed = 0;
+unsigned long lastlapElapsed = 0;
+bool timerRunning = false;
+bool lapComplete = false;
+
 struct can_frame buttonMsg;
 struct can_frame PdlMsg;
 struct can_frame PotMsg;
@@ -152,8 +160,8 @@ void loop() {
     buttonMsg.data[7] = (abtn_2.position_reading == 3);
 
 
-//    Serial.print("position reading -->  ");
-//    Serial.println(abtn_2.position_reading);
+    //    Serial.print("position reading -->  ");
+    //    Serial.println(abtn_2.position_reading);
   }
 
   // Timer 10 msec
@@ -186,6 +194,9 @@ void loop() {
   if (millis() - lastTimeMsg2 >= 200 && millis() - lastTimeMsg1 > 66) {
     lastTimeMsg2 = millis();
     mcp2515.sendMessage(&PdlMsg);
+    if (PdlMsg.data[7] == 1 && PdlMsg.data[5] == 1) chrono_screen_en = true;
+    else chrono_screen_en = false;
+
   }
 
   if (millis() - lastTimeMsg3 >= 200 && millis() - lastTimeMsg1 > 130) {
@@ -198,25 +209,44 @@ void loop() {
   {
     if (veh_sw_information.can_id == 0x0F7) {
       // RPM
-      writeRPMtoScreen(min(9500,veh_sw_information.data[1]*50), 65, 10, 8500);
-      // Speed
-      writetmptoScreen(min(500,veh_sw_information.data[2]*2), 45, 85, 300, ST7735_WHITE);
-      // Drv and Pwt
-      writemodetoScreen(veh_sw_information.data[3] & 0b00001111, (veh_sw_information.data[3] & 0b11110000)>>4);
-      // Gear egear
-      writetmptoScreen(min(8,((veh_sw_information.data[4] & 0b11110000)>>4)), 95, 90, 10, ST7735_RED);
-      // Gear ice
-      writetmptoScreen(min(8,veh_sw_information.data[4] & 0b00001111), 95, 55, 10, ST7735_RED);
-      // PRNDM
-      writegeartoeScreen(min(7,(veh_sw_information.data[5] & 0b11110000)>>4), 55, 40);
-      // Temp Oil
-      writetmptoScreen(min(255,veh_sw_information.data[6]), 10, 90, 85, ST7735_BLUE);
-      // Temp Coolant
-      writetmptoScreen(min(255,veh_sw_information.data[7]), 10, 55, 95, ST7735_BLUE);
-
+      writeRPMtoScreen(min(9500, veh_sw_information.data[1] * 50), 65, 10, 8500);
+      //Chrono Screen OFF
+      if (!chrono_screen_en) {
+        // Speed
+        writetmptoScreen(min(500, veh_sw_information.data[2] * 2), 45, 85, 300, ST7735_WHITE);
+        // Drv and Pwt
+        writemodetoScreen(veh_sw_information.data[3] & 0b00001111, (veh_sw_information.data[3] & 0b11110000) >> 4);
+        // Gear egear
+        writetmptoScreen(min(8, ((veh_sw_information.data[4] & 0b11110000) >> 4)), 95, 90, 10, ST7735_RED);
+        // Gear ice
+        writetmptoScreen(min(8, veh_sw_information.data[4] & 0b00001111), 95, 55, 10, ST7735_RED);
+        // PRNDM
+        writegeartoeScreen(min(7, (veh_sw_information.data[5] & 0b11110000) >> 4), 55, 40);
+        // Temp Oil
+        writetmptoScreen(min(255, veh_sw_information.data[6]), 10, 90, 85, ST7735_BLUE);
+        // Temp Coolant
+        writetmptoScreen(min(255, veh_sw_information.data[7]), 10, 55, 95, ST7735_BLUE);
+      }
+      //Chrono Screen ON
+      else {
+        // Speed
+        writetmptoScreen(min(500, veh_sw_information.data[2] * 2), 65, 40, 300, ST7735_WHITE);
+        writeTimetoScreen(min(500, veh_sw_information.data[2] * 2), 20, 110, 5, 380, Timer_100_Millis);
+      }
     }
   }
 
+  // chrono screen setup
+  if (chrono_screen_en == true && time_attack_screen_init == false) {
+    tftscreeninit();
+    timeattackscreen();
+    time_attack_screen_init = true;
+  }
+  else if (chrono_screen_en == false && time_attack_screen_init == true) {
+    tftscreeninit();
+    statictextwrite();
+    time_attack_screen_init = false;
+  }
 
 }
 
@@ -418,68 +448,68 @@ void writetmptoScreen(uint16_t tmp, int16_t  x0, int16_t y0, int16_t const tmpLi
 }
 
 void writegeartoeScreen(uint8_t gear, int16_t  x0, int16_t y0) {
-  switch(gear)
+  switch (gear)
   {
-  case 0:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('N');  // Print a text or value
-    break;
-  case 1:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('P');  // Print a text or value
-    break;
-  case 2:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('R');  // Print a text or value
-    break;
-  case 4:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('D');  // Print a text or value
-    break;
-  case 5:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('M');  // Print a text or value
-  break;
-  case 6:  
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_BLACK);
-    tft.println(' ');  // Print a text or value
-    tft.setCursor(x0, y0);  // Set position (x,y)
-    tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    tft.println('M');  // Print a text or value
-  break;
+    case 0:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('N');  // Print a text or value
+      break;
+    case 1:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('P');  // Print a text or value
+      break;
+    case 2:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('R');  // Print a text or value
+      break;
+    case 4:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('D');  // Print a text or value
+      break;
+    case 5:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('M');  // Print a text or value
+      break;
+    case 6:
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_BLACK);
+      tft.println(' ');  // Print a text or value
+      tft.setCursor(x0, y0);  // Set position (x,y)
+      tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.println('M');  // Print a text or value
+      break;
   }
 
 }
@@ -488,9 +518,9 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
   //DriveMode
   tft.setTextSize(2);  // Set text size. We are using custom font so you should always set text size as 0
   // Write to the display the text "World":
-//  tft.setCursor(5, 116);  // Set position (x,y)
-//  tft.setTextColor(ST7735_WHITE);  // Set color of text. We are using custom font so there is no background color supported
-   switch (drivemode){
+  //  tft.setCursor(5, 116);  // Set position (x,y)
+  //  tft.setTextColor(ST7735_WHITE);  // Set color of text. We are using custom font so there is no background color supported
+  switch (drivemode) {
     case 0:
       tft.setCursor(5, 116);
       tft.setTextColor(ST7735_BLACK);
@@ -516,7 +546,7 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
       tft.print("ECHAR");
       break;
     case 4:
-      tft.setCursor(5, 116);  
+      tft.setCursor(5, 116);
       tft.setTextColor(ST7735_BLACK);
       tft.print("     ");
       tft.setCursor(5, 116);
@@ -524,7 +554,7 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
       tft.print("TRACK");
       break;
   }
-   switch (pwtmode){
+  switch (pwtmode) {
     case 0:
       tft.setCursor(80, 116);
       tft.setTextColor(ST7735_BLACK);
@@ -635,4 +665,105 @@ void testdrawtext(char *text, uint16_t color) {
   tft.setTextWrap(true);
   tft.setTextSize(1);
   tft.print(text);
+}
+
+void timeattackscreen() {
+  tft.fillScreen(ST7735_BLACK);
+
+  // === RPM ENG (Top Line) ===
+  tft.setTextSize(1);
+  tft.setCursor(5, 10);
+  tft.setTextColor(ST7735_WHITE);
+  tft.println("RPM ENG");
+
+  // White separator line
+  tft.drawLine(0, 28, 128, 28, ST7735_WHITE);
+
+  // === SPEED (Second Line) ===
+  tft.setCursor(5, 40);
+  tft.println("SPEED");
+
+  // Second separator under SPEED
+  tft.drawLine(0, 65, 128, 65, ST7735_WHITE);
+
+  // === LAP TIMER (Third Section) ===
+  tft.setCursor(5, 80);
+  tft.setTextSize(2);
+  tft.setTextColor(ST7735_WHITE);
+  tft.println("   TIME"); // placeholder text, you can update dynamically
+
+  // === PEDALS (KEEP THEM) ===
+  // Brake (left - red)
+  tft.fillRect(0, 135, 64, 25, ST7735_RED);
+
+  // Accelerator (right - green)
+  tft.fillRect(64, 135, 64, 25, ST7735_GREEN);
+}
+
+
+// ====== FUNCTION TO UPDATE TIMER ======
+void writeTimetoScreen(int vehspd, int16_t  x0, int16_t y0, int start_speed, int stop_speed, unsigned long current_time) {
+
+  if (vehspd > start_speed && !timerRunning && !lapComplete) {
+    timerRunning = true;
+    lapStartTime = millis();
+  }
+
+  // Stop timer when speed = 0
+  if (vehspd >= stop_speed && timerRunning) {
+    timerRunning = false;
+    lapElapsed = millis() - lapStartTime;
+    lapComplete = true;
+    lastlapElapsed = lapElapsed;
+  }
+
+  // Update elapsed while running
+  if (timerRunning) {
+    lapElapsed = millis() - lapStartTime;
+  }
+
+  if (vehspd < start_speed) lapComplete = false;
+
+  unsigned int minutes = lapElapsed / 60000;
+  unsigned int seconds = (lapElapsed % 60000) / 1000;
+  unsigned int ms = (lapElapsed % 1000) / 10;
+
+  //  unsigned int last_minutes = lastlapElapsed / 60000;
+  //  unsigned int last_seconds = (lastlapElapsed % 60000) / 1000;
+  //  unsigned int last_ms = (lastlapElapsed % 1000) / 10;
+//  if (lapComplete) {
+//    tft.setTextColor(ST7735_RED);
+//  }
+//  else {
+//    tft.setTextColor(ST7735_WHITE);
+//  }
+  tft.fillRect(x0, y0, 128, 18, ST7735_BLACK);
+
+  tft.setCursor(x0, y0);
+  tft.setTextSize(2);
+  // Print minutes
+  if (minutes < 10) tft.print("0");
+  tft.print(minutes);
+  tft.print(".");
+  // Print seconds
+  if (seconds < 10) tft.print("0");
+  tft.print(seconds);
+  tft.print(".");
+  // Print milliseconds (two digits)
+  if (ms < 10) tft.print("0");
+  tft.print(ms);
+
+  //  tft.setCursor(x0, y0+20);
+  //  tft.setTextSize(2);
+  //  // Print minutes
+  //  if (last_minutes < 10) tft.print("0");
+  //  tft.print(last_minutes);
+  //  tft.print(".");
+  //  // Print seconds
+  //  if (last_seconds < 10) tft.print("0");
+  //  tft.print(last_seconds);
+  //  tft.print(".");
+  //  // Print milliseconds (two digits)
+  //  if (last_ms < 10) tft.print("0");
+  //  tft.print(last_ms);
 }
