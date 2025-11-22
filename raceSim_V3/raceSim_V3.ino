@@ -739,12 +739,12 @@ void writeTimetoScreen(int vehspd, int16_t  x0, int16_t y0, int start_speed, int
   //  unsigned int last_minutes = lastlapElapsed / 60000;
   //  unsigned int last_seconds = (lastlapElapsed % 60000) / 1000;
   //  unsigned int last_ms = (lastlapElapsed % 1000) / 10;
-//  if (lapComplete) {
-//    tft.setTextColor(ST7735_RED);
-//  }
-//  else {
-//    tft.setTextColor(ST7735_WHITE);
-//  }
+  if (lapComplete) {
+    tft.setTextColor(ST7735_RED);
+  }
+  else {
+    tft.setTextColor(ST7735_WHITE);
+  }
   tft.fillRect(x0, y0, 128, 18, ST7735_BLACK);
 
   tft.setCursor(x0, y0);
