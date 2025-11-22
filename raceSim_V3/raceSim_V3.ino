@@ -450,7 +450,7 @@ void writetmptoScreen(uint16_t tmp, int16_t  x0, int16_t y0, int16_t const tmpLi
 void writegeartoeScreen(uint8_t gear, int16_t  x0, int16_t y0) {
   switch (gear)
   {
-    case 0:
+    case 3:
       tft.setCursor(x0, y0);  // Set position (x,y)
       tft.setTextSize(3);  // Set text size. Goes from 0 (the smallest) to 20 (very big)
       tft.setTextColor(ST7735_BLACK);
@@ -529,7 +529,7 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
       tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
       tft.println("COMFR");  // Print a text or value
       break;
-    case 2:
+    case 1:
       tft.setCursor(5, 116);
       tft.setTextColor(ST7735_BLACK);
       tft.print("     ");
@@ -537,15 +537,15 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
       tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
       tft.print("SPORT");
       break;
-    case 1:
+    case 3:
       tft.setCursor(5, 116);
       tft.setTextColor(ST7735_BLACK);
       tft.print("     ");
       tft.setCursor(5, 116);
       tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-      tft.print("ECHAR");
+      tft.print("CUSTM");
       break;
-    case 4:
+    case 2:
       tft.setCursor(5, 116);
       tft.setTextColor(ST7735_BLACK);
       tft.print("     ");
@@ -572,6 +572,14 @@ void writemodetoScreen(uint8_t drivemode, uint8_t pwtmode) {
       tft.print("EV ");
       break;
     case 2:
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_BLACK);
+      tft.print("   ");
+      tft.setCursor(80, 116);
+      tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+      tft.print("ECH");
+      break;
+    case 3:
       tft.setCursor(80, 116);
       tft.setTextColor(ST7735_BLACK);
       tft.print("   ");
